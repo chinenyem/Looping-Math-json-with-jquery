@@ -1,0 +1,189 @@
+$(function () {
+
+    var data39 = {{ data39 | safe }}
+    var new_data21 = $.makeArray(data39.series);
+    var table_data = new_data21;
+    var percent_arr = []
+    
+    data39['category'].sort();
+    
+    // function for the table and for new percent array for column chart
+    var table_data_arr = []
+        table_data['0']['name'] = data39['category'];
+        table_data_arr.push(table_data[0])
+    
+    
+    $.each(table_data_arr, function(key, value) {
+          var needs = table_data_arr[key]['Total'];
+          var has = table_data_arr[key]['Encase'];
+          var org = table_data_arr[key].name;
+        	for (var i = 0; i < has.length; i++) {
+                tr = $('<tr/>');
+                tr.append("<td class='text-left'><b>" + org[i] + "</b> (" + (needs[i]+has[i]) + ")</td><td>" + needs[i] + "</td><td>" + has[i] + "</td>")
+                $('#charttableeight').append(tr);
+                var new_has = has[i];
+                var new_needs = needs[i]
+                var total = new_has + new_needs 
+                var new_dec = Math.round((new_has/total) * 100)
+                percent_arr.push(new_dec)
+            }
+            
+         });
+         
+         delete data39.series['name']
+    
+  
+
+    var chart;
+    //sort the categories, map data index with the correct category
+    var sortData = function(chartSource) {
+        var series = chartSource.series;
+        var axis = chartSource.xAxis[0];
+        var categories = [];
+        
+        if($.isArray(series)) {
+            var ser = $.grep(series, function(ser, seriesIndex) {
+                return ser.visible;
+            })[0];
+            $.each(ser.data, function(dataIndex, datum) {
+                var obj = {
+                    name: datum.category,
+                    index: dataIndex
+                }
+                categories.push(obj);
+            });
+        }
+        
+        categories.sort(function(a, b) {
+            var aName = a.name.toLowerCase();
+            var bName = b.name.toLowerCase();
+            return ((aName < bName) ? -1 : ((aName > bName) ? 1 : 0));
+        });
+        
+        var mappedIndex = $.map(categories, function(category, index) {
+            return category.index;
+        });
+        
+        categories = $.map(categories, function(category, index) {
+            return category.name;
+        });
+       
+        axis.setCategories(categories);
+        
+        $.each(series, function(seriesIndex, ser) {
+            var data = $.map(mappedIndex, function(mappedIndex, origIndex) {
+                return ser.data[mappedIndex].y;
+            });
+            ser.setData(data);
+        });
+        console.log(series)
+         $.each(series[0].data,function(i,data){
+                if(data.y <= 65){
+                    data.graphic.attr({
+                        fill:'red'
+                    });
+                    data.update({
+                        color: 'red'
+                    })
+                }else if (data.y >= 66 && data.y <= 89 )  {
+                     data.graphic.attr({
+                        fill:'yellow'
+                    });
+                    data.update({
+                        color: 'yellow'
+                    })
+                }else if (data.y >= 90){
+                    data.graphic.attr({
+                        fill:'green'
+                    })
+                    data.update({
+                        color: 'green'
+                    })
+                }
+                
+            });
+        
+    };
+
+
+
+    
+
+    chart = new Highcharts.Chart({
+        chart: {
+            type: 'column',
+            renderTo: sdd_dhcs_splunk_percent_qr_report
+        },
+
+        exporting: {
+            sourceWidth: 900,
+            sourceHeight: 400,
+            scale: 1
+        },
+
+        title: {
+            text: 'SDD DHCS'
+        },
+        
+        credits:{enabled:false},
+         legend: {
+            labelFormatter: function () {
+                return this.name ;
+            }
+        },
+        xAxis:  {
+            type: 'category',
+            categories: data39.category
+        },
+        yAxis: {
+            min: 0,
+            title:'none',
+            labels: {
+                formatter:function() {
+                    return this.value + '%'
+                }
+           }
+            
+        },
+       
+        tooltip: {
+            headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+            pointFormat:'<td style="padding:0"><b>{point.y}%</b></td></tr>',
+            footerFormat: '</table>',
+            shared: true,
+            useHTML: true
+        },
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0,
+                dataLabels: {
+                    enabled: true,
+                   formatter:function(){
+                      return  (this.y == 0) ? 'N/A' : this.y + ' %'
+                    }
+                }
+            },
+                series: {
+                    events: {
+                        hide: function() { sortData(chart); },
+                        show: function() { sortData(chart); }
+                    }                        
+                }
+            
+             
+        },
+        series: [{
+        		showInLegend: false,
+        		colorByPoint: true,
+        		data: percent_arr
+      }]
+      
+      
+    }, function(chart) {sortData(chart);});
+    
+   
+    
+    
+    
+});
